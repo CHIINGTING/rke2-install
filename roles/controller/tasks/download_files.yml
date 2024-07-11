@@ -1,0 +1,49 @@
+- name: 包含 URL 變數
+  include_vars:
+    file: vars/urls.yml
+
+- name: 建立目錄並進入目錄
+  command: mkdir -p /root/rke2-artifacts && cd /root/rke2-artifacts/
+
+- name: 下載 rke2-images.linux-amd64.tar.gz
+  command: curl -OLs --max-time 600 "{{ rke2_images_url }}"
+  args:
+    chdir: /root/rke2-artifacts/
+    warn: false
+  register: result
+  until: result.rc == 0
+  retries: 5
+  delay: 60
+  environment:
+    http_proxy: "{{ http_proxy }}"
+    https_proxy: "{{ https_proxy }}"
+    no_proxy: "{{ no_proxy }}"
+
+- name: 下載 rke2.linux-amd64.tar.gz
+  command: curl -OLs --max-time 600 "{{ rke2_binary_url }}"
+  args:
+    chdir: /root/rke2-artifacts/
+    warn: false
+  register: result
+  until: result.rc == 0
+  retries: 5
+  delay: 60
+  environment:
+    http_proxy: "{{ http_proxy }}"
+    https_proxy: "{{ https_proxy }}"
+    no_proxy: "{{ no_proxy }}"
+
+- name: 下載 sha256sum-amd64.txt
+  command: curl -OLs --max-time 600 "{{ rke2_sha256_url }}"
+  args:
+    chdir: /root/rke2-artifacts/
+    warn: false
+  register: result
+  until: result.rc == 0
+  retries: 5
+  delay: 60
+  environment:
+    http_proxy: "{{ http_proxy }}"
+    https_proxy: "{{ https_proxy }}"
+    no_proxy
+

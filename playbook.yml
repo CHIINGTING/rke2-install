@@ -1,0 +1,12 @@
+- hosts: controller
+  become: yes
+  vars_files:
+    - env_vars.yml
+  roles:
+    - controller
+- hosts: worker
+  become: yes
+  vars_files:
+    - env_vars.yml
+  roles:
+    - worker

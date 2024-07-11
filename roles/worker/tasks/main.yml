@@ -1,0 +1,129 @@
+- name: 建立目錄並進入目錄
+  command: mkdir -p /root/rke2-artifacts && cd /root/rke2-artifacts/
+  when: inventory_hostname != 'controller01'
+
+- name: 包含下載任務
+  include_tasks: tasks/download_files.yml
+  when: inventory_hostname != 'controller01'
+
+- name: 設定 install.sh 可執行權限
+  command: chmod +x install.sh
+  args:
+    chdir: /root/rke2-artifacts/
+  when: inventory_hostname != 'controller01'
+
+- name: 執行 install.sh
+  shell: INSTALL_RKE2_ARTIFACT_PATH=/root/rke2-artifacts INSTALL_RKE2_TYPE="agent" http_proxy={{ http_proxy }} https_proxy={{ https_proxy }} no_proxy={{ no_proxy }} sh install.sh
+  args:
+    chdir: /root/rke2-artifacts/
+    executable: /bin/bash
+  async: 600
+  poll: 5
+  when: inventory_hostname != 'controller01'
+
+- name: 建立 rancher 目錄
+  file:
+    path: /etc/rancher/rke2
+    state: directory
+    mode: '0755'
+  when: inventory_hostname != 'controller01'
+
+- name: 準備 calico
+  file:
+    path: /var/lib/rancher/rke2/server/manifests
+    state: directory
+    mode: '0755'
+  when: inventory_hostname != 'controller01'
+
+- name: 建立 rke2-calico-config.yaml
+  copy:
+    dest: /var/lib/rancher/rke2/server/manifests/rke2-calico-config.yaml
+    content: |
+      ---
+      apiVersion: helm.cattle.io/v1
+      kind: HelmChartConfig
+      metadata:
+        name: rke2-calico
+        namespace: kube-system
+      spec:
+        valuesContent: |-
+          installation:
+            calicoNetwork:
+              mtu: 1450
+          updateStrategy:
+            type: RollingUpdate
+            rollingUpdate:
+              maxUnavailable: 1
+  when: inventory_hostname != 'controller01'
+
+- name: 準備 proxy
+  lineinfile:
+    dest: /etc/default/rke2-agent
+    line: "{{ item }}"
+  with_items:
+    - "HTTP_PROXY={{ http_proxy }}"
+    - "HTTPS_PROXY={{ https_proxy }}"
+    - "NO_PROXY={{ no_proxy }}"
+  when: inventory_hostname != 'controller01'
+
+- name: 準備 ingress nginx
+  file:
+    path: /var/lib/rancher/rke2/server/manifests
+    state: directory
+    mode: '0755'
+  when: inventory_hostname != 'controller01'
+
+- name: 建立 rancher 目錄
+  file:
+    path: /etc/rancher/rke2
+    state: directory
+    mode: '0755'
+  when: inventory_hostname != 'controller01'
+
+- name: 取得 token (僅在 controller01 節點上執行)
+  command: cat /var/lib/rancher/rke2/server/node-token
+  register: node_token
+  when: inventory_hostname == 'controller01'
+
+- name: 設定全局 node_token 變數 (僅在 controller01 節點上執行)
+  set_fact:
+    global_node_token: "{{ node_token.stdout }}"
+  when: inventory_hostname == 'controller01' and node_token is defined
+
+- name: 等待 node_token 變數設置完成
+  wait_for:
+    timeout: 30
+  when: inventory_hostname != 'controller01'
+
+- name: 建立 config.yaml
+  copy:
+    dest: /etc/rancher/rke2/config.yaml
+    content: |
+      server: https://k8s-api.104dc-dev.com:9345
+      token: "{{ hostvars['controller01'].global_node_token }}"
+      node-name: "{{ inventory_hostname }}"
+      tls-san:
+      - k8s-api.104dc-dev.com
+      - 172.24.250.133
+      kube-apiserver-extra-env: TZ=Asia/Taipei
+      kube-controller-manager-extra-env: TZ=Asia/Taipei
+      kube-proxy-extra-env: TZ=Asia/Taipei
+      kube-scheduler-extra-env: TZ=Asia/Taipei
+      kubelet-arg:
+      - "protect-kernel-defaults=true"
+      - "fail-swap-on=true"
+      - "rotate-server-certificates=true"
+      - "container-log-max-files=20"
+      - "container-log-max-size=20Mi"
+      - "kube-reserved=cpu=500m,memory=500Mi,ephemeral-storage=1Gi"
+      - "system-reserved=cpu=500m,memory=500Mi,ephemeral-storage=1Gi"
+      cni:
+        - calico
+  when: inventory_hostname != 'controller01'
+
+- name: 啟動 rke2-agent 服務
+  systemd:
+    name: rke2-agent.service
+    enabled: yes
+    state: started
+  when: inventory_hostname != 'controller01'

@@ -1,0 +1,9 @@
+[controller]
+controller01 ansible_host=172.24.250.18
+controller02 ansible_host=172.24.250.19
+controller03 ansible_host=172.24.250.20
+
+[all:vars]
+http_proxy=http://sproxy.104-dev.com.tw:3128
+https_proxy=http://sproxy.104-dev.com.tw:3128
+no_proxy="127.0.0.0/8, 172.16.0.0/12, 10.0.0.0/8, 192.168.0.0/16, .104dc.com, .104.com.tw, .104dc-dev.com, .104-dev.com.tw, .104dc-staging.com, .104-staging.com.tw, .cattle-system, .svc"

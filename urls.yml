@@ -1,0 +1,4 @@
+rke2_images_url: "https://github.com/rancher/rke2/releases/download/v1.28.10%2Brke2r1/rke2-images.linux-amd64.tar.gz"
+rke2_binary_url: "https://github.com/rancher/rke2/releases/download/v1.28.10%2Brke2r1/rke2.linux-amd64.tar.gz"
+rke2_sha256_url: "https://github.com/rancher/rke2/releases/download/v1.28.10%2Brke2r1/sha256sum-amd64.txt"
+rke2_install_url: "https://get.rke2.io"
